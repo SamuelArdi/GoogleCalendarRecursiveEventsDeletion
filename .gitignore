@@ -1,0 +1,8 @@
+# sensitive information
+sensitive/*
+__pycache__/*
+quickstart/*
+
+# usual stuff
+testing/*
+
