@@ -2,7 +2,10 @@
 sensitive/*
 __pycache__/*
 quickstart/*
+# used to hide token.json, but using * just in case
+*.json
 
-# usual stuff
+# the usual stuff
 testing/*
+output.txt
 
