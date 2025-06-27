@@ -1,12 +1,17 @@
 import re
 import time
+import colorama as color
 
+# initialize colorama
+color.init()
 
 def viewEvents(eventsInList):
     if not eventsInList:
         print("There are no events on this/these day(s)")
         return
     else:
+        # TODO: somtime later make this a .json file instead of a plain txt,
+        # so it would ACTUALLY be easier to read then terminal
         open("output.txt", "w").close()  # cleans the file before appending
         for event in eventsInList:
             # variables
@@ -21,7 +26,7 @@ def viewEvents(eventsInList):
             eventId = event["id"]
             eventOrganizerEmail = event["organizer"].get("email")
 
-            # log
+            # logging
             print("\n----------------------------------------------------------\n")
 
             print(
@@ -68,17 +73,17 @@ def viewEvents(eventsInList):
     )
 
 
-def recursiveEventsDeletion(entries, service):
-    # NOTE: This is the main part where you want to be careful
+def recursiveEventsDeletion(entries, service, excluded):
+    # WARN: the code below contains code that can DELETE events
+    # be extremely careful when testing to try and not delete important events
     for event in entries:
         eventID = event["id"]
         print(f"Deleting {event['summary']}\nEventID: {eventID}\n")
 
-        # WARN: Especially this
-        # service.events().delete(
-        #     calendarId="primary", eventId=eventID, sendUpdates="all"
-        # ).execute()
-        # NOTE: disabled temporarily for testing
+        # WARN: below is what deletes the events, be careful around here
+        service.events().delete(
+            calendarId="primary", eventId=eventID, sendUpdates="all"
+        ).execute()
 
 
 def exclusion(eventList, timeOffset):
@@ -114,48 +119,14 @@ def exclusion(eventList, timeOffset):
             break
 
     # the actual function code
-    print(
-        "Before adding your dates to exclude, please read this first.",
-        "\nThese are the format you'll need to enter in:\n",
-        "\n----------------------------------------------------------",
-        "\nDate format:",
-        # date
-        "\nDate: YYYY-MM-DD",
-        "\nY = Year",
-        "\nM = Month",
-        "\nD = Day\n",
-        # time
-        "\nTime format",
-        "\nTime: HH:MM:SS",
-        "\nH = Hour (This uses the 24h format)",
-        "\nM = Minute",
-        "\nS = Second",
-        "\n----------------------------------------------------------\n",
-        "\n----------------------------------------------------------",
-        # examples
-        "\nExample 1:",
-        "\nDate: 2025-06-25",
-        "\nStart Time: 16:00:00",
-        "\nEnd Time: 22:00:00\n"
-        # example 2
-        "\nExample 2:",
-        "\nDate: 2008-07-18",
-        "\nStart Time: 13:00:00",
-        "\nEnd Time: 15:00:00\n"
-        # example 3
-        "\nExample 3:",
-        "\nDate: 2004-02-12",
-        "\nStart Time: 07:00:00",
-        "\nEnd Time: 18:00:00",
-        "\n----------------------------------------------------------\n",
-    )
-
     excludedDates = {}
     dateAmount = 1
     loopIterations = int(input("Amount of dates to exclude: "))
     print("Please enter the required information:")
+    print("\nThe date and time format is the same as shown above")
     for i in range(loopIterations):
         print("\nDate #%s" % dateAmount)
+        # TODO: check if the date and time is in the correct format
         date = input("Date: ")
         timeStart = input("Time Start: ")
         timeEnd = input("Time End: ")
@@ -166,3 +137,33 @@ def exclusion(eventList, timeOffset):
         dateAmount += 1
 
     print(excludedDates)
+
+def formatLoop(format, input):
+    idx = 0
+    for formatChar in format:
+        if input[idx].isnumeric() is formatChar.isnumeric():
+            idx += 1
+        else:
+            print(
+                color.Fore.RED +
+                f"ERROR: {input} doesn't match expected format at {input[:idx]}[{input[idx]}], the format expected is {input[:idx]}[{formatChar}]"
+            )
+            return "DATE FORMAT ERROR"
+    print(
+        color.Fore.GREEN +
+        f"The input date {input} format matches with the expected format"
+    )
+    return "DATE FORMAT VALID"
+
+def formatValidator(startDate, endDate, timeMin, timeMax):
+    n = int()
+    correctFormat = {
+        "dateFormat": f"{n}{n}{n}{n}-{n}{n}-{n}{n}",
+        "timeFormat": f"{n}{n}:{n}{n}:{n}{n}",
+    }
+
+    dateVars = [startDate, endDate]
+    for inputDate in dateVars:
+        output = formatLoop(correctFormat["dateFormat"], inputDate)
+        if output == "DATE FORMAT ERROR":
+            return output
