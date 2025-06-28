@@ -1,3 +1,4 @@
+import calendar
 import re
 import time
 import colorama as color
@@ -5,9 +6,68 @@ import colorama as color
 # initialize colorama
 color.init()
 
+
+class formatFunctions:
+    def dateFormat(self, format, input):
+        idx = 0
+        for formatChar in format:
+            if input[idx].isnumeric() is formatChar.isnumeric():
+                idx += 1
+            else:
+                print(
+                    color.Fore.RED +
+                    f"ERROR: {input} doesn't match expecter format at {input[:idx]}[{input[idx]}], the format expected is {input[:idx]}[{formatChar}]"
+                )
+                return "DATE FORMAT ERROR"
+        return "DATE FORMAT VALID"
+
+    def validDay(self, day, month, year):
+        if int(day) > 31:
+            print(
+                color.Fore.RED +
+                f"ERROR: {year}-{month}-[{day}], day can't be higher than 31"
+            )
+            return "DATE DAY ERROR"
+        elif day < 1:
+            print(
+                color.Fore.RED + 
+                f"ERROR: {year}-{month}-[0{day}], day can't be lower than 01"
+            )
+            return "DATE DAY ERROR"
+
+    def validDayLeap(self, day, month, year, isLeapYear):
+        # if its a leap year
+        if isLeapYear == True and day > 29:
+            print(
+                color.Fore.RED + 
+                f"ERROR: {year}-{month}-[{day}], day can't be higher than 29 on Febuary leap year"
+            )
+            return "DATE DAY ERROR"
+        elif isLeapYear == True and day < 1:
+            print(
+                color.Fore.RED + 
+                f"ERROR: {year}-{month}-[{day}], day can't be higher than 28 on Febuary non-leap year"
+            )
+            return "DATE DAY ERROR"
+
+        # if not leap year
+        elif isLeapYear == False and day > 28:
+            print(
+                color.Fore.RED +
+                f"ERROR: Day can't be higher than 28 on Febuary non-leap year"
+            )
+            return "DATE DAY ERROR"
+        elif isLeapYear == False and day < 1:
+            print(
+                color.Fore.RED + 
+                f"ERROR: Day can't be lower than 01"
+            )
+            return "DATE DAY ERROR"
+
+
 def viewEvents(eventsInList):
     if not eventsInList:
-        print("There are no events on this/these day(s)")
+        print("There are no events on this date range")
         return
     else:
         # TODO: somtime later make this a .json file instead of a plain txt,
@@ -18,7 +78,7 @@ def viewEvents(eventsInList):
             start = event["start"].get("dateTime")
             startConfigured = re.split(r"[T+]", start)
             creatorEmail = event["creator"].get("email")
-            eventStatus = event["status"]
+            eventStatus =event["status"]
             try:
                 recurringEventId = event["recurringEventId"]
             except KeyError:
@@ -73,6 +133,7 @@ def viewEvents(eventsInList):
     )
 
 
+# TODO: work on the exclusion thingy after the format validation
 def recursiveEventsDeletion(entries, service, excluded):
     # WARN: the code below contains code that can DELETE events
     # be extremely careful when testing to try and not delete important events
@@ -138,22 +199,6 @@ def exclusion(eventList, timeOffset):
 
     print(excludedDates)
 
-def formatLoop(format, input):
-    idx = 0
-    for formatChar in format:
-        if input[idx].isnumeric() is formatChar.isnumeric():
-            idx += 1
-        else:
-            print(
-                color.Fore.RED +
-                f"ERROR: {input} doesn't match expected format at {input[:idx]}[{input[idx]}], the format expected is {input[:idx]}[{formatChar}]"
-            )
-            return "DATE FORMAT ERROR"
-    print(
-        color.Fore.GREEN +
-        f"The input date {input} format matches with the expected format"
-    )
-    return "DATE FORMAT VALID"
 
 def formatValidator(startDate, endDate, timeMin, timeMax):
     n = int()
@@ -161,9 +206,68 @@ def formatValidator(startDate, endDate, timeMin, timeMax):
         "dateFormat": f"{n}{n}{n}{n}-{n}{n}-{n}{n}",
         "timeFormat": f"{n}{n}:{n}{n}:{n}{n}",
     }
+    funcs = formatFunctions()
 
+    # NOTE: validating dates
     dateVars = [startDate, endDate]
     for inputDate in dateVars:
-        output = formatLoop(correctFormat["dateFormat"], inputDate)
+        output = funcs.dateFormat(correctFormat["dateFormat"], inputDate)
         if output == "DATE FORMAT ERROR":
             return output
+    print(
+        color.Fore.GREEN +
+        f"The input date format matches with the expected format"
+    )
+
+    # check if the dates are actually correct
+    for date in dateVars:
+        year = int(date[:4])
+        month = int(date[5:-3])
+        day = int(date[8:])
+
+        # check year
+        # this is may be weird, but ill just set the highest as 2100
+        # and the lowest ill set it to 1900
+        if year > 2100:
+            print(
+                color.Fore.RED +
+                f"ERROR: Year can't be higher than 2100"
+            )
+            return "DATE YEAR ERROR"
+        elif year < 1900:
+            print(
+                color.Fore.RED +
+                f"ERROR: Year can't be lower than 1900"
+            )
+            return "DATE YEAR ERROR"
+        # check month
+        if month > 12:
+            print(
+                color.Fore.RED +
+                    f"ERROR: month doesn't exist {date[:-5]}[{month}]{date[7:]}"
+            )
+            return "DATE MONTH ERROR"
+        elif month < 1:
+            print(
+                color.Fore.RED +
+                    f"ERROR: month doesn't exist {date[:-5]}[{month}0]{date[7:]}"
+            )
+            return "DATE MONTH ERROR"
+
+        # check day
+        if month == 2: # check if this year is a leap year
+            if calendar.isleap(year) == True:
+                log = funcs.validDayLeap(day, month, year, True)
+                if log == "DATE DAY ERROR": return log
+            else:
+                log = funcs.validDayLeap(day, month, year, False)
+                if log == "DATE DAY ERROR": return log
+        else:
+            log = funcs.validDay(day, month, year)
+            if log == "DATE DAY ERROR": return log
+    print(
+        color.Fore.GREEN +
+        f"No problems with the date, continue to validate time"
+    )
+
+    # NOTE: validating time

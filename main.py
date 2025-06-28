@@ -31,12 +31,12 @@ def main():
         dateMax = input(f"End Date (empty = {dateMin}): ")
         if len(dateMax) == 0:
             dateMax = dateMin
-        # timeMin = input("\nStart Time: ")
-        # timeMax = input("End Time (empty = 23:00:00): ")
-        # if len(timeMax) == 0:
-        #     timeMax = "23:00:00"
+        timeMin = input("\nStart Time: ")
+        timeMax = input("End Time (empty = 23:00:00): ")
+        if len(timeMax) == 0:
+            timeMax = "23:00:00"
         mFuncs.formatValidator(dateMin, dateMax, timeMin = "00:00:00", timeMax = "23:00:00")
-        return  # NOTE: exit here for testing
+        return  # NOTE: return here for testing purposes
 
         # WARN: REMEMBER THESE 2 LINES OF CODE
         timeMinInclude = f"2025-06-23T00:00:00{configuredOffset}"  # NOTE: Starting Date
