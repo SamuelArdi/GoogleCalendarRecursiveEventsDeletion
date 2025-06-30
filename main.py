@@ -1,5 +1,4 @@
 import datetime
-from inspect import _empty
 from zoneinfo import ZoneInfo
 import re
 
@@ -27,20 +26,29 @@ def main():
 
         oFuncs.printFormat()  # shows the required format
         # print("Please enter the date and time according to the format shown above:")
-        dateMin = input("\nStart Date: ")
-        dateMax = input(f"End Date (empty = {dateMin}): ")
-        if len(dateMax) == 0:
-            dateMax = dateMin
-        timeMin = input("\nStart Time: ")
-        timeMax = input("End Time (empty = 23:00:00): ")
-        if len(timeMax) == 0:
-            timeMax = "23:00:00"
-        mFuncs.formatValidator(dateMin, dateMax, timeMin = "00:00:00", timeMax = "23:00:00")
+        dateStart = input("\nStart Date: ")
+        if len(dateStart) == 0:
+            dateStart = datetime.datetime.today().strftime("%Y-%m-%d")
+        dateEnd = input(f"End Date (empty = {dateStart}): ")
+        if len(dateEnd) == 0:
+            dateEnd = dateStart
+
+        # TODO: enable after done testing
+        timeStart = input("\nStart Time: ")
+        if len(timeStart) == 0:
+            timeStart = "00:00:00"
+        timeEnd = input("End Time (empty = 23:00:00): ")
+        if len(timeEnd) == 0:
+            timeEnd = "23:00:00"
+
+        mFuncs.formatValidator(dateStart, dateEnd, timeStart, timeEnd)
         return  # NOTE: return here for testing purposes
 
         # WARN: REMEMBER THESE 2 LINES OF CODE
-        timeMinInclude = f"2025-06-23T00:00:00{configuredOffset}"  # NOTE: Starting Date
-        timeMaxInclude = f"2025-06-27T23:00:00{configuredOffset}"  # NOTE: Ending Date
+        timeMinInclude = (
+            f"{dateStart}T{timeStart}{configuredOffset}"  # NOTE: Starting Date
+        )
+        timeMaxInclude = f"{dateEnd}T{timeEnd}{configuredOffset}"  # NOTE: Ending Date
         # WARN: THEY ARE THE DELETION DATE RANGE
 
         eventsInDateRange = (
