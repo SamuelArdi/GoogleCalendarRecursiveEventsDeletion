@@ -20,21 +20,22 @@ def main():
         userTimeZone = ZoneInfo(calendarEntry["timeZone"])
         timeNow = datetime.datetime.now(userTimeZone)
         timeOffset = timeNow.strftime("%z")
+        dateToday = datetime.datetime.today().strftime("%Y-%m-%d")
         # i know this is a scuffed way to format it but fuck it,
         # if it works and it doesnt break anything, it works
         configuredOffset = f"{timeOffset[:3]}:{timeOffset[-2:]}"
 
         oFuncs.printFormat()  # shows the required format
         # print("Please enter the date and time according to the format shown above:")
-        dateStart = input("\nStart Date: ")
+        dateStart = input(f"\nStart Date (empty = {dateToday}): ")
         if len(dateStart) == 0:
-            dateStart = datetime.datetime.today().strftime("%Y-%m-%d")
+            dateStart = dateToday
         dateEnd = input(f"End Date (empty = {dateStart}): ")
         if len(dateEnd) == 0:
             dateEnd = dateStart
 
         # TODO: enable after done testing
-        timeStart = input("\nStart Time: ")
+        timeStart = input("\nStart Time (emtpy = 00:00:00) ")
         if len(timeStart) == 0:
             timeStart = "00:00:00"
         timeEnd = input("End Time (empty = 23:00:00): ")

@@ -2,6 +2,7 @@ import calendar
 import re
 import time as tm
 import colorama as color
+from requests import get
 
 # initialize colorama
 color.init()
@@ -13,17 +14,29 @@ GREEN = color.Fore.GREEN
 
 class formatFunctions:
     def validateFormat(self, format, input, type):
-        # TODO: validate that the separators are correct
         idx = 0
         for formatChar in format:
             if input[idx].isnumeric() is formatChar.isnumeric():
                 # check if the separator is correct
                 idx += 1
             else:
+                # TODO: make the error message better
                 print(
                     f"{RED}ERROR: {RESET}{input} does not match expected format at {input[:idx]}{RED}[{input[idx]}]{RESET}, the format expected is {input[:idx]}{GREEN}[{formatChar}]{RESET}"
                 )
                 return f"{type.upper()} FORMAT ERROR"
+
+    def validateSeparator(self, separator, input, type):
+        # instantly check with position based on type
+        if type == "date":
+            # 0000-00-00
+            positions = [4, 7]
+            for pos in positions:
+                if ord(input[pos]) != ord(separator):
+                    print(
+                        f"{RED}ERROR: {RESET}Unexpected input separator at {input[:pos]}{RED}[{input[pos]}]{RESET}, expected separator {input[:pos]}{GREEN}[{separator}]{RESET}"
+                    )
+                    return "DATE SEPARATOR ERROR"
 
     def validDay(self, day, month, year):
         if int(day) > 31:
@@ -63,7 +76,7 @@ def viewEvents(eventsInList):
         return
     else:
         # TODO: somtime later make this a .json file instead of a plain txt,
-        # so it would ACTUALLY be easier to read then terminal
+        # so it would ACTUALLY be easier to read than in the terminal
         open("output.txt", "w").close()  # cleans the file before appending
         for event in eventsInList:
             # variables
@@ -206,46 +219,66 @@ def formatValidator(startDate, endDate, timeStart, timeEnd):
         output = funcs.validateFormat(correctFormat["dateFormat"], inputDate, "date")
         if output == "DATE FORMAT ERROR":
             return output
-    print(GREEN + "The input date format matches with the expected format")
+
+    for inputDate in dateVars:
+        output = funcs.validateSeparator("-", inputDate, "date")
+        if output == "DATE SEPARATOR ERROR":
+            return output
+    print(
+        f"{GREEN}SUCCESS: {RESET}The input date format matches with the expected format"
+    )
 
     # check if the dates are actually correct
     for date in dateVars:
-        year = int(date[:4])
-        month = int(date[5:-3])
-        day = int(date[8:])
+        try:
+            year = int(date[:4])
+            month = int(date[5:-3])
+            day = int(date[8:])
 
-        # check year
-        # this is may be weird, but ill just set the highest as 2100
-        # and the lowest ill set it to 1900
-        if year > 2100:
-            print(RED + "ERROR: Year can't be higher than 2100")
-            return "DATE YEAR ERROR"
-        elif year < 1900:
-            print(RED + "ERROR: Year can't be lower than 1900")
-            return "DATE YEAR ERROR"
-        # check month
-        if month > 12:
-            print(RED + f"ERROR: month doesn't exist {date[:-5]}[{month}]{date[7:]}")
-            return "DATE MONTH ERROR"
-        elif month < 1:
-            print(RED + f"ERROR: month doesn't exist {date[:-5]}[{month}0]{date[7:]}")
-            return "DATE MONTH ERROR"
+            # check year
+            # this is may be weird, but ill just set the highest as 3000
+            # and the lowest ill set it to 1900
+            if year > 3000:
+                print(RED + "ERROR: Year can't be higher than 2100")
+                return "DATE YEAR ERROR"
+            elif year < 1900:
+                print(RED + "ERROR: Year can't be lower than 1900")
+                return "DATE YEAR ERROR"
+            # check month
+            if month > 12:
+                print(
+                    RED + f"ERROR: month doesn't exist {date[:-5]}[{month}]{date[7:]}"
+                )
+                return "DATE MONTH ERROR"
+            elif month < 1:
+                print(
+                    RED + f"ERROR: month doesn't exist {date[:-5]}[{month}0]{date[7:]}"
+                )
+                return "DATE MONTH ERROR"
 
-        # check day
-        if month == 2:  # check if this year is a leap year
-            if calendar.isleap(year):
-                log = funcs.validDayLeap(day, month, year, True)
-                if log == "DATE DAY ERROR":
-                    return log
+            # check day
+            if month == 2:  # check if this year is a leap year
+                if calendar.isleap(year):
+                    log = funcs.validDayLeap(day, month, year, True)
+                    if log == "DATE DAY ERROR":
+                        return log
+                else:
+                    log = funcs.validDayLeap(day, month, year, False)
+                    if log == "DATE DAY ERROR":
+                        return log
             else:
-                log = funcs.validDayLeap(day, month, year, False)
+                log = funcs.validDay(day, month, year)
                 if log == "DATE DAY ERROR":
                     return log
-        else:
-            log = funcs.validDay(day, month, year)
-            if log == "DATE DAY ERROR":
-                return log
-    print(GREEN + "Date values matches with expected values")
+        except ValueError:
+            lastHyphen = date.rfind("-")
+            getDay = lastHyphen + 1
+            overLen = len(date[getDay + 2 :])
+            print(
+                f"{RED}ERROR: {RESET}Unexpected input date day on {date[: lastHyphen + 1]}{RED}[{date[getDay:]}]{RESET}, expected input {date[: lastHyphen + 1]}{GREEN}[{date[getDay:-overLen]}]{RESET}"
+            )
+            return "DATE DAY FORMAT ERROR"
+    print(f"{GREEN}SUCCESS: {RESET}Date values matches with expected values")
 
     # NOTE: validating time
     timeVars = [timeStart, timeEnd]
@@ -253,51 +286,62 @@ def formatValidator(startDate, endDate, timeStart, timeEnd):
         output = funcs.validateFormat(correctFormat["timeFormat"], timeInput, "time")
         if output == "TIME FORMAT ERROR":
             return output
-    print(GREEN + "The time format matches with the expected format")
+    print(f"{GREEN}SUCCESS: {RESET}The time format matches with the expected format")
 
     for time in timeVars:
-        # hh:mm:ss
-        hour = int(time[:2])
-        minute = int(time[3:-3])
-        second = int(time[6:])
+        try:
+            # hh:mm:ss
+            hour = int(time[:2])
+            minute = int(time[3:-3])
+            second = int(time[6:])
 
-        # validate hour
-        if hour > 23:
-            print(
-                RED + f"ERROR: [{hour}]:{minute}:{second} Hour can't be higher than 23"
-            )
-            return "TIME HOUR ERROR"
-        elif hour < 0:
-            print(
-                RED + f"ERROR: [0{hour}]:{minute}:{second} Hour can't be lower than 01"
-            )
-            return "TIME HOUR ERROR"
+            # validate hour
+            if hour > 23:
+                print(
+                    RED
+                    + f"ERROR: [{hour}]:{minute}:{second} Hour can't be higher than 23"
+                )
+                return "TIME HOUR ERROR"
+            elif hour < 0:
+                print(
+                    RED
+                    + f"ERROR: [0{hour}]:{minute}:{second} Hour can't be lower than 01"
+                )
+                return "TIME HOUR ERROR"
 
-        # validate minute
-        if minute > 59:
-            print(
-                RED
-                + f"ERROR: {hour}:[{minute}]:{second} Minute can't be higher than 59"
-            )
-            return "TIME MINUTE ERROR"
-        elif minute < 0:
-            print(
-                RED
-                + f"ERROR: {hour}:[0{minute}]:{second} Minute can't be lower than 01"
-            )
-            return "TIME MINUTE ERROR"
+            # validate minute
+            if minute > 59:
+                print(
+                    RED
+                    + f"ERROR: {hour}:[{minute}]:{second} Minute can't be higher than 59"
+                )
+                return "TIME MINUTE ERROR"
+            elif minute < 0:
+                print(
+                    RED
+                    + f"ERROR: {hour}:[0{minute}]:{second} Minute can't be lower than 01"
+                )
+                return "TIME MINUTE ERROR"
 
-        # validate second
-        if second > 59:
+            # validate second
+            if second > 59:
+                print(
+                    RED
+                    + f"ERROR: {hour}:{minute}:[{second}] Second can't be higher than 59"
+                )
+                return "TIME SECOND ERROR"
+            elif second < 0:
+                print(
+                    RED
+                    + f"ERROR: {hour}:{minute}:[0{second}] Second can't be lower than 01"
+                )
+                return "TIME SECOND ERROR"
+        except ValueError:
+            lastColon = time.rfind(":")
+            getSecond = lastColon + 1
+            overLen = len(time[getSecond + 2 :])
             print(
-                RED
-                + f"ERROR: {hour}:{minute}:[{second}] Second can't be higher than 59"
+                f"{RED}ERROR: {RESET}Unexpeced input time seconds on {time[: lastColon + 1]}{RED}[{time[getSecond:]}]{RESET}, expected input {time[: lastColon + 1]}{GREEN}[{time[getSecond:-overLen]}]{RESET}"
             )
-            return "TIME SECOND ERROR"
-        elif second < 0:
-            print(
-                RED
-                + f"ERROR: {hour}:{minute}:[0{second}] Second can't be lower than 01"
-            )
-            return "TIME SECOND ERROR"
-    print(GREEN + "Time values matches with expected values")
+            return "TIME SECOND FORMAT ERROR"
+    print(f"{GREEN}SUCCESS: {RESET}Time values matches with expected values")
