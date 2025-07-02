@@ -2,7 +2,6 @@ import calendar
 import re
 import time as tm
 import colorama as color
-from requests import get
 
 # initialize colorama
 color.init()
@@ -37,36 +36,49 @@ class formatFunctions:
                         f"{RED}ERROR: {RESET}Unexpected input separator at {input[:pos]}{RED}[{input[pos]}]{RESET}, expected separator {input[:pos]}{GREEN}[{separator}]{RESET}"
                     )
                     return "DATE SEPARATOR ERROR"
+        elif type == "time":
+            # 00:00:00
+            positions = [2, 5]
+            for pos in positions:
+                if ord(input[pos]) != ord(separator):
+                    print(
+                        f"{RED}ERROR: {RESET}Unexpected input separator at {input[:pos]}{RED}[{input[pos]}]{RESET}, expected separator {input[:pos]}{GREEN}[{separator}]{RESET}"
+                    )
+                    return "TIME SEPARATOR ERROR"
 
     def validDay(self, day, month, year):
         if int(day) > 31:
-            print(RED + f"ERROR: {year}-{month}-[{day}], day can't be higher than 31")
+            print(
+                f"{RED}ERROR: {year}-{month}-{RED}[{day}]{RESET}, day can't be higher than {RED}31{RESET}"
+            )
             return "DATE DAY ERROR"
         elif day < 1:
-            print(RED + f"ERROR: {year}-{month}-[0{day}], day can't be lower than 01")
+            print(
+                f"{RED}ERROR: {year}-{month}-{RED}[0{day}]{RESET}, day can't be lower than {RED}01{RESET}"
+            )
             return "DATE DAY ERROR"
 
     def validDayLeap(self, day, month, year, isLeapYear):
         # if its a leap year
         if isLeapYear and day > 29:
             print(
-                RED
-                + f"ERROR: {year}-{month}-[{day}], day can't be higher than 29 on Febuary leap year"
+                f"{RED}ERROR: {RESET}{year}-{month}-{RED}[{day}]{RESET}, day can't be higher than {RED}29{RESET} on Febuary leap year"
             )
             return "DATE DAY ERROR"
         elif isLeapYear and day < 1:
             print(
-                RED
-                + f"ERROR: {year}-{month}-[{day}], day can't be higher than 28 on Febuary non-leap year"
+                f"{RED}ERROR: {RESET}{year}-{month}-{RED}[0{day}]{RESET}, day can't be lower than {RED}01{RESET}"
             )
             return "DATE DAY ERROR"
 
         # if not leap year
-        elif isLeapYear and day > 28:
-            print(RED + "ERROR: Day can't be higher than 28 on Febuary non-leap year")
+        elif not isLeapYear and day > 28:
+            print(
+                f"{RED}ERROR: {RESET}Day can't be higher than {RED}28{RESET} on Febuary non-leap year"
+            )
             return "DATE DAY ERROR"
-        elif isLeapYear and day < 1:
-            print(RED + "ERROR: Day can't be lower than 01")
+        elif not isLeapYear and day < 1:
+            print(f"{RED}ERROR: {RESET}Day dan't be lower than {RED}01{RESET}")
             return "DATE DAY ERROR"
 
 
@@ -239,20 +251,20 @@ def formatValidator(startDate, endDate, timeStart, timeEnd):
             # this is may be weird, but ill just set the highest as 3000
             # and the lowest ill set it to 1900
             if year > 3000:
-                print(RED + "ERROR: Year can't be higher than 2100")
+                print(f"{RED}ERROR: {RESET}Year can't be higher than {RED}2100{RESET}")
                 return "DATE YEAR ERROR"
             elif year < 1900:
-                print(RED + "ERROR: Year can't be lower than 1900")
+                print(f"{RED}ERROR: {RESET}Year can't be lower than {RED}1900{RESET}")
                 return "DATE YEAR ERROR"
             # check month
             if month > 12:
                 print(
-                    RED + f"ERROR: month doesn't exist {date[:-5]}[{month}]{date[7:]}"
+                    f"{RED}ERROR: {RESET}month doesn't exist {date[:-5]}{RED}[{month}]{RESET}{date[7:]}"
                 )
                 return "DATE MONTH ERROR"
             elif month < 1:
                 print(
-                    RED + f"ERROR: month doesn't exist {date[:-5]}[{month}0]{date[7:]}"
+                    f"{RED}ERROR: {RESET}month doesn't exist {date[:-5]}{RED}[{month}]{RESET}{date[7:]}"
                 )
                 return "DATE MONTH ERROR"
 
@@ -275,7 +287,7 @@ def formatValidator(startDate, endDate, timeStart, timeEnd):
             getDay = lastHyphen + 1
             overLen = len(date[getDay + 2 :])
             print(
-                f"{RED}ERROR: {RESET}Unexpected input date day on {date[: lastHyphen + 1]}{RED}[{date[getDay:]}]{RESET}, expected input {date[: lastHyphen + 1]}{GREEN}[{date[getDay:-overLen]}]{RESET}"
+                f"{RED}ERROR: {RESET}Unexpected input date value on {date[: lastHyphen + 1]}{RED}[{date[getDay:]}]{RESET}, expected input {date[: lastHyphen + 1]}{GREEN}[{date[getDay:-overLen]}]{RESET}"
             )
             return "DATE DAY FORMAT ERROR"
     print(f"{GREEN}SUCCESS: {RESET}Date values matches with expected values")
@@ -285,6 +297,11 @@ def formatValidator(startDate, endDate, timeStart, timeEnd):
     for timeInput in timeVars:
         output = funcs.validateFormat(correctFormat["timeFormat"], timeInput, "time")
         if output == "TIME FORMAT ERROR":
+            return output
+
+    for timeInput in timeVars:
+        output = funcs.validateSeparator(":", timeInput, "time")
+        if output == "TIME SEPARATOR ERROR":
             return output
     print(f"{GREEN}SUCCESS: {RESET}The time format matches with the expected format")
 
