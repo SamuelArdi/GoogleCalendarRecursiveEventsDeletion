@@ -1,6 +1,6 @@
+import datetime
 import calendar
 import re
-import time as tm
 import colorama as color
 
 # initialize colorama
@@ -19,7 +19,7 @@ class formatFunctions:
                 # check if the separator is correct
                 idx += 1
             else:
-                # TODO: make the error message better
+                # TODO: make this error message better
                 print(
                     f"{RED}ERROR: {RESET}{input} does not match expected format at {input[:idx]}{RED}[{input[idx]}]{RESET}, the format expected is {input[:idx]}{GREEN}[{formatChar}]{RESET}"
                 )
@@ -78,8 +78,44 @@ class formatFunctions:
             )
             return "DATE DAY ERROR"
         elif not isLeapYear and day < 1:
-            print(f"{RED}ERROR: {RESET}Day dan't be lower than {RED}01{RESET}")
+            print(f"{RED}ERROR: {RESET}Day can't be lower than {RED}01{RESET}")
             return "DATE DAY ERROR"
+
+
+class exclusionModes:
+    def singleMode(self):
+        dateToday = datetime.datetime.today().strftime("%Y-%m-%d")
+        loopActive = True
+        idx = 0
+        exclusionList = {}
+        while loopActive:
+            print(f"\nDate: #{idx + 1}")
+            inputDate = input(f"Date (empty = {dateToday}): ")
+            if len(inputDate) == 0:
+                inputDate = dateToday
+
+            timeStart = input("Time Start (empty = 00:00:00): ")
+            if len(timeStart) == 0:
+                timeStart = "00:00:00"
+            timeEnd = input("Time End (empty = 23:00:00): ")
+            if len(timeEnd) == 0:
+                timeEnd = "00:00:00"
+
+            # check if format is valid
+            isFormatValid = formatValidator(inputDate, inputDate, timeStart, timeEnd)
+            if isFormatValid is not True:
+                print(f"{RED}FAILURE: Format is not valid, please try again{RESET}")
+                return "FORMAT ERROR"
+            else:
+                # dict structure
+                # list = {
+                #   "date":
+                #       "timeStart": "00:00:00"
+                #       d'timeEnd: "23:00:00"
+                # }
+                exclusionList[inputDate] = {"timeStart": timeStart, "timeEnd": timeEnd}
+                print(exclusionList)
+                idx += 1
 
 
 def viewEvents(eventsInList):
@@ -87,7 +123,7 @@ def viewEvents(eventsInList):
         print("There are no events on this date range")
         return
     else:
-        # TODO: somtime later make this a .json file instead of a plain txt,
+        # TODO: sometime later make this a .json file instead of a plain txt,
         # so it would ACTUALLY be easier to read than in the terminal
         open("output.txt", "w").close()  # cleans the file before appending
         for event in eventsInList:
@@ -150,71 +186,20 @@ def viewEvents(eventsInList):
     )
 
 
-# TODO: work on the exclusion thingy after the format validation
-def recursiveEventsDeletion(entries, service, excluded):
-    # WARN: the code below contains code that can DELETE events
-    # be extremely careful when testing to try and not delete important events
-    for event in entries:
-        eventID = event["id"]
-        print(f"Deleting {event['summary']}\nEventID: {eventID}\n")
+def exclusion():
+    print("\nWelcome to exclusion mode")
+    print("Where you can exclude and prevent events from being deleted")
 
-        # WARN: below is what deletes the events, be careful around here
-        service.events().delete(
-            calendarId="primary", eventId=eventID, sendUpdates="all"
-        ).execute()
-
-
-def exclusion(eventList, timeOffset):
-    print("Entering exclusion mode")
-
-    # hehehe animation go brrr
-    anim = [
-        # to upper case
-        "loading",
-        "Loading",
-        "LOading",
-        "LOAding",
-        "LOADing",
-        "LOADIng",
-        "LOADINg",
-        "LOADING",
-        # back to lower case
-        "lOADING",
-        "loADING",
-        "loaDING",
-        "loadING",
-        "loadiNG",
-        "loadinG",
-        "loading",
-    ]
-
-    i = 0
-    while True:
-        print(anim[i % len(anim)], end="\r")
-        tm.sleep(0.08)
-        i += 1
-        if i == (anim.__len__()) * 2:
-            break
-
-    # the actual function code
-    excludedDates = {}
-    dateAmount = 1
-    loopIterations = int(input("Amount of dates to exclude: "))
-    print("Please enter the required information:")
-    print("\nThe date and time format is the same as shown above")
-    for i in range(loopIterations):
-        print("\nDate #%s" % dateAmount)
-        # TODO: check if the date and time is in the correct format
-        date = input("Date: ")
-        timeStart = input("Time Start: ")
-        timeEnd = input("Time End: ")
-        excludedDates[date] = {
-            "startTime": f"{timeStart}{timeOffset}",
-            "endTime": f"{timeEnd}{timeOffset}",
-        }
-        dateAmount += 1
-
-    print(excludedDates)
+    exclusionList = None
+    modes = exclusionModes()
+    exclusionMode = input(
+        "Choose an exclusion mode [(s)ingle/(r)ecurring/exit]: "
+    ).lower()
+    if exclusionMode == "exit":
+        return None
+    elif exclusionMode == "s" or exclusionMode == "single":
+        exclusionList = modes.singleMode()
+    # excluding a specific date
 
 
 def formatValidator(startDate, endDate, timeStart, timeEnd):
@@ -362,3 +347,7 @@ def formatValidator(startDate, endDate, timeStart, timeEnd):
             )
             return "TIME SECOND FORMAT ERROR"
     print(f"{GREEN}SUCCESS: {RESET}Time values matches with expected values")
+
+    # uhh lets just say that when it reaches this return line
+    # it means that every other check was completed and there was not problem
+    return True

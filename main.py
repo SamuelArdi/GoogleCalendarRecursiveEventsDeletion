@@ -1,6 +1,7 @@
 import datetime
 from zoneinfo import ZoneInfo
 import re
+import colorama as color
 
 import mainFuncs as mFuncs
 import otherFuncs as oFuncs
@@ -8,6 +9,14 @@ import otherFuncs as oFuncs
 from getCredentials import getCreds as creds
 from googleapiclient.discovery import build
 from googleapiclient.model import HttpError
+
+# initializing colorama
+color.init()
+
+# setting global color values
+RESET = color.Fore.RESET
+RED = color.Fore.RED
+GREEN = color.Fore.GREEN
 
 
 def main():
@@ -34,17 +43,31 @@ def main():
         if len(dateEnd) == 0:
             dateEnd = dateStart
 
-        # TODO: enable after done testing
-        timeStart = input("\nStart Time (emtpy = 00:00:00) ")
+        timeStart = input("\nStart Time (emtpy = 00:00:00): ")
         if len(timeStart) == 0:
             timeStart = "00:00:00"
         timeEnd = input("End Time (empty = 23:00:00): ")
         if len(timeEnd) == 0:
             timeEnd = "23:00:00"
 
-        mFuncs.formatValidator(dateStart, dateEnd, timeStart, timeEnd)
-        return  # NOTE: return here for testing purposes
+        isFormatValid = mFuncs.formatValidator(dateStart, dateEnd, timeStart, timeEnd)
+        if isFormatValid is not True:
+            print(f"{RED}FAILURE: Format is not valid, please try again{RESET}")
 
+        # NOTE: exclusion
+        datesExcluded = None
+        doExclusion = input(
+            "\nDo you wish to add dates to exclude from the deletion process? [YES/no]: "
+        ).lower()
+        if doExclusion == "yes" or doExclusion != "no":
+            # datesExcluded = mFuncs.exclusion(eventsEntries, timeOffset)
+            datesExcluded = mFuncs.exclusion()
+        elif doExclusion == "no":
+            print("Continuing deletion without exclusion")
+        else:
+            print("ERROR: Answer not recognized")
+
+        return "exit"  # NOTE: temporarily return here for testing
         # WARN: REMEMBER THESE 2 LINES OF CODE
         timeMinInclude = (
             f"{dateStart}T{timeStart}{configuredOffset}"  # NOTE: Starting Date
@@ -65,18 +88,6 @@ def main():
             .execute()
         )
         eventsEntries = eventsInDateRange.get("items", [])
-
-        # NOTE: exclusion
-        datesExcluded = None
-        doExclusion = input(
-            "Do you wish to add dates to exclude from the deletion process? [YES/no]: "
-        ).lower()
-        if doExclusion == "yes" or doExclusion != "no":
-            datesExcluded = mFuncs.exclusion(eventsEntries, timeOffset)
-        elif doExclusion == "no":
-            print("Continuing deletion without exclusion")
-        else:
-            print("ERROR: Answer not recognized")
 
         # NOTE: deletion
         if not eventsEntries:
@@ -100,11 +111,22 @@ def main():
                 mFuncs.viewEvents(eventsEntries)
                 return
             elif confirmation == "yes":
-                oFuncs.animateWorkingFunction(
-                    mFuncs.recursiveEventsDeletion(
-                        eventsEntries, service, datesExcluded
-                    )
-                )
+                # oFuncs.animateWorkingFunction(
+                #     mFuncs.recursiveEventsDeletion(
+                #         eventsEntries, service, datesExcluded
+                #     )
+                # )
+
+                # WARN: the code below contains code that can DELETE events
+                # be extremely careful when testing to try and not delete important events
+                for event in eventsEntries:
+                    eventID = event["id"]
+                    print(f"Deleting {event['summary']}\nEventID: {eventID}\n")
+
+                    # WARN: below is what deletes the events, be careful around here
+                    # service.events().delete(
+                    #     calendarId="primary", eventId=eventID, sendUpdates="all"
+                    # ).execute()
             else:
                 print("ERROR: Answer not recognized")
                 return
@@ -114,4 +136,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nKeyboard interruption detected, exiting...")
