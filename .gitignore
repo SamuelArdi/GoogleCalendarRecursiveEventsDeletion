@@ -2,7 +2,10 @@
 sensitive/*
 __pycache__/*
 quickstart/*
+branches/*
 
 # usual stuff
 testing/*
-
+venv-pypy3/*
+*.txt
+*.json

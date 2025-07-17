@@ -1,76 +1,20 @@
 import datetime
 from zoneinfo import ZoneInfo
 import re
+import colorama as color
+
+import mainFuncs as mfuncs
+import otherFuncs as ofuncs
 
 from getCredentials import getCreds as creds
 from googleapiclient.discovery import build
 from googleapiclient.model import HttpError
 
+color.init()
 
-def viewEvents(eventsInList):
-    if not eventsInList:
-        print("There are no events on this/these day(s)")
-        return
-    else:
-        open("output.txt", "w").close()  # cleans the file before appending
-        for event in eventsInList:
-            # variables
-            start = event["start"].get("dateTime")
-            startConfigured = re.split(r"[T+]", start)
-            creatorEmail = event["creator"].get("email")
-            eventStatus = event["status"]
-            try:
-                recurringEventId = event["recurringEventId"]
-            except KeyError:
-                recurringEventId = "empty"
-            eventId = event["id"]
-            eventOrganizerEmail = event["organizer"].get("email")
-
-            # log
-            print("\n----------------------------------------------------------\n")
-
-            print(
-                f"Date: {startConfigured[0]}",
-                f"\nTime: {startConfigured[1]}",
-                f"\nTitle: {event['summary']}",
-            )
-
-            print("\nStatus (confirmed = active): %s" % eventStatus)
-            print("Event Creator Email: %s" % creatorEmail)
-            print("Event Organizer Email: %s" % eventOrganizerEmail)
-
-            print("\nEventID:\n%s" % eventId)
-            print(
-                "Recurring EventID (empty = not a recurring event):\n%s"
-                % recurringEventId
-            )
-
-            # output log
-            with open("output.txt", "a") as out:
-                out.write(
-                    "\n----------------------------------------------------------\n"
-                )
-
-                out.write(
-                    f"\nDate: {startConfigured[0]}\nTime:{startConfigured[1]}\nEvent Title: {event['summary']}\n"
-                )
-
-                out.write("\nStatus (confirmed = active): %s" % eventStatus)
-                out.write("\nEvent Creator Email: %s" % creatorEmail)
-                out.write("\nEvent Organizer Email: %s\n" % eventOrganizerEmail)
-
-                out.write("\nEventID:\n%s" % eventId)
-                out.write(
-                    "\nRecurring EventID (empty = not a recurring event):\n%s\n"
-                    % recurringEventId
-                )
-    print("Finished permanently deleting all events")
-    print(
-        '\nTo make sure you aren\'t removing the wrong events, a file named "output.txt" bes been made with the contents from the terminal into the current working directory/folder'
-    )
-    print(
-        'Make sure to read the "output.txt" file before making your decision to delete'
-    )
+RESET = color.Fore.RESET
+RED = color.Fore.RED
+GREEN = color.Fore.GREEN
 
 
 def main():
@@ -81,13 +25,37 @@ def main():
         userTimeZone = ZoneInfo(calendarEntry["timeZone"])
         timeNow = datetime.datetime.now(userTimeZone)
         timeOffset = timeNow.strftime("%z")
+        dateToday = datetime.datetime.today().strftime("%Y-%m-%d")
         # i know this is a scuffed way to do it but fuck it,
         # if it works and it doesnt break anything, it works
         configuredOffset = f"{timeOffset[:3]}:{timeOffset[-2:]}"
 
+        ofuncs.printFormat()
+        print("Please enter the date and time according to the format shown above")
+
+        dateStart = input(f"\nStart Date (empty = {dateToday}): ")
+        dateEnd = input(f"End Date (empty = {dateToday}): ")
+        if len(dateStart) == 0:
+            dateStart = dateToday
+        if len(dateEnd) == 0:
+            dateEnd = dateStart
+
+        timeStart = input("\nStart Time (empty = 00:00:00): ")
+        timeEnd = input("End Time (empty = 23:00:00): ")
+        if len(timeStart) == 0:
+            timeStart = "00:00:00"
+        if len(timeEnd) == 0:
+            timeEnd = "23:00:00"
+
+        # validate format
+        ifFormatValid = mfuncs.formatValidator(dateStart, dateEnd, timeStart, timeEnd)
+        if ifFormatValid is not True:
+            print(f"{RED}FAILURE: Format is not valid, please try again{RESET}")
+            return "FORMAT ERROR"
+
         # WARN: REMEMBER THESE 2 LINES OF CODE
-        min = f"2025-06-23T00:00:00{configuredOffset}"  # NOTE: Starting Date
-        max = f"2025-06-23T23:00:00{configuredOffset}"  # NOTE: Ending Date
+        timeMin = f"{dateStart}T{timeStart}{configuredOffset}"  # NOTE: Starting Date
+        timeMax = f"{dateEnd}T{timeEnd}{configuredOffset}"  # NOTE: Ending Date
         # WARN: THEY ARE THE DATE RANGES
 
         eventsInDateRange = (
@@ -95,8 +63,8 @@ def main():
             .list(
                 calendarId="primary",
                 orderBy="startTime",
-                timeMin=min,
-                timeMax=max,
+                timeMin=timeMin,
+                timeMax=timeMax,
                 singleEvents=True,
                 timeZone=userTimeZone,
             )
@@ -108,12 +76,10 @@ def main():
             print("There are no events on the dates specified")
             return
         else:
-            # WARN: the code below contains code that can DELETE events
-            # be extremely careful when testing to try and not delete important events
-            startDate = re.split(r"[T+]", min)
-            endDate = re.split(r"[T+]", max)
+            startDate = re.split(r"[T+]", timeMin)
+            endDate = re.split(r"[T+]", timeMax)
             print(
-                "Google is going to delete all events starting from:\n",
+                "\nGoogle is going to delete all events starting from:\n",
                 f"{startDate[0]} | {startDate[1]}, until:\n",
                 f"{endDate[0]} | {endDate[1]}",
             )
@@ -126,15 +92,16 @@ def main():
             elif confirmation == "no":
                 return
             elif confirmation == "view":
-                viewEvents(eventsEntries)
+                mfuncs.viewEvents(eventsEntries)
                 return
             elif confirmation == "yes":
-                # NOTE: This is the main part where you want to be careful
+                # WARN: the code below contains code that can DELETE events
+                # be extremely careful when testing to try and not delete important events
                 for event in eventsEntries:
                     eventID = event["id"]
                     print(f"Deleting {event['summary']}\nEventID: {eventID}\n")
 
-                    # WARN: Especially this
+                    # WARN: below is what deletes the events, becareful when tinkering here
                     service.events().delete(
                         calendarId="primary", eventId=eventID, sendUpdates="all"
                     ).execute()
@@ -147,4 +114,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nKeyboard interupption detected, exiting...")
